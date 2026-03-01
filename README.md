@@ -1,0 +1,2 @@
+# Real-Time-Embedded-Smart-Traffic-Light-Control-Using-Vehicle-to-Infrastructure-V2I-Communication
+Real-Time Embedded Smart Traffic Light Control using Vehicle-to-Infrastructure (V2I) communication with two ESP32 boards. The master controls traffic signals and detects vehicles using an IR sensor, while the slave vehicle responds by stopping at red, slowing at yellow, and moving at green using PWM motor control.
