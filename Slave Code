@@ -1,0 +1,67 @@
+#include "BluetoothSerial.h"
+BluetoothSerial SerialBT;
+
+#define IN1 25  // Right Front
+#define IN2 26  // Right Rear
+#define IN3 32  // Left Front
+#define IN4 33  // Left Rear
+
+bool carActive = false; // Flag to ignore signals after passing
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+
+  stopCar();
+
+  SerialBT.begin("ESP32_SLAVE");
+  Serial.println("Slave Ready... Waiting for Master...");
+}
+
+void loop() {
+  if (SerialBT.connected() && SerialBT.available()) {
+    char received = SerialBT.read();
+    Serial.print("Received: ");
+    Serial.println(received);
+
+    if (!carActive && received == 'G') {
+      carActive = true; // Car started moving
+    }
+
+    if (carActive) {
+      if (received == 'G') {
+        // Move forward: Right CW, Left CCW
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+        Serial.println("Car Moving Forward");
+
+      } else if (received == 'Y') {
+        // Slow down gradually (PWM can be used if motors support)
+        analogWrite(IN1, 64); // 50% speed Right Front
+        analogWrite(IN2, 0);   // Right Rear
+        analogWrite(IN3, 64);   // Left Front
+        analogWrite(IN4, 0); // 50% speed Left Rear
+        Serial.println("Car Slowing Down");
+
+      } else if (received == 'R') {
+        stopCar();
+        Serial.println("Car Stopped");
+      }
+    }
+  }
+
+  // Optional: reset carActive if using a sensor on the car to detect traffic light passed
+}
+
+void stopCar() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
