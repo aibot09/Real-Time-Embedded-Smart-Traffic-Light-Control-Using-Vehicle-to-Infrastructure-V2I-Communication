@@ -1,0 +1,86 @@
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;
+
+// Slave MAC Address
+uint8_t slaveMAC[] = {0xCC, 0x7B, 0x5C, 0x34, 0xDE, 0x76};
+
+// Traffic Light LEDs
+#define RED_LED 14
+#define YELLOW_LED 12
+#define GREEN_LED 27
+
+// IR Sensor pin
+#define IR_SENSOR 13  // Active LOW: LOW = car detected
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(RED_LED, OUTPUT);
+  pinMode(YELLOW_LED, OUTPUT);
+  pinMode(GREEN_LED, OUTPUT);
+  pinMode(IR_SENSOR, INPUT_PULLUP); // IR sensor active LOW
+
+  SerialBT.begin("ESP32_MASTER", true); // Master mode
+
+  Serial.println("Connecting to Slave...");
+  if (SerialBT.connect(slaveMAC)) {
+    Serial.println("Connected to Slave Successfully!");
+  } else {
+    Serial.println("Connection Failed!");
+  }
+
+  // Default state: Red
+  digitalWrite(RED_LED, HIGH);
+  digitalWrite(YELLOW_LED, LOW);
+  digitalWrite(GREEN_LED, LOW);
+}
+
+void loop() {
+  // Check if a car is approaching
+  if (digitalRead(IR_SENSOR) == LOW) {  // Car detected
+
+    if (SerialBT.connected()) {
+
+      Serial.println("Car Detected! Starting traffic-light sequence...");
+
+      // 🟢 GREEN LIGHT
+      digitalWrite(GREEN_LED, HIGH);
+      digitalWrite(YELLOW_LED, LOW);
+      digitalWrite(RED_LED, LOW);
+      SerialBT.write('G'); // Tell slave to move
+      Serial.println("Sent: G");
+      delay(10000); // Green duration
+
+      // 🟡 YELLOW LIGHT
+      digitalWrite(GREEN_LED, LOW);
+      digitalWrite(YELLOW_LED, HIGH);
+      digitalWrite(RED_LED, LOW);
+      SerialBT.write('Y'); // Tell slave to slow
+      Serial.println("Sent: Y");
+      delay(3000); // Yellow duration
+
+      // 🔴 RED LIGHT
+      digitalWrite(GREEN_LED, LOW);
+      digitalWrite(YELLOW_LED, LOW);
+      digitalWrite(RED_LED, HIGH);
+      SerialBT.write('R'); // Tell slave to stop
+      Serial.println("Sent: R");
+      delay(7000); // Red duration
+
+      // Wait until car passes the traffic light
+      while (digitalRead(IR_SENSOR) == LOW) {
+        delay(100); // Wait until car moves away
+      }
+
+      Serial.println("Car Passed! Traffic light idle until next car...");
+
+    }
+  } else {
+    // No car: keep red light on
+    digitalWrite(RED_LED, HIGH);
+    digitalWrite(YELLOW_LED, LOW);
+    digitalWrite(GREEN_LED, LOW);
+    delay(500);
+  }
+}
